@@ -1,0 +1,21 @@
+{
+  "name": "teleport",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "setup": "npm i && lerna bootstrap --yes && lerna run build",
+    "start:dev:backend": "npm run start:dev --prefix=packages/backend",
+    "start:dev:frontend": "npm run start:dev --prefix=packages/frontend",
+    "start:backend": "npm run start --prefix=packages/backend",
+    "start:frontend": "npm run start --prefix=packages/frontend",
+    "watch:backend": "npm run watch --prefix=packages/backend"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "lerna": "^4.0.0"
+  }
+}
