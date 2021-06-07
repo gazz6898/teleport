@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "setup": "npm i && lerna bootstrap --yes && lerna run build",
+    "setup": "npm i && lerna bootstrap && lerna run build",
     "start:dev:backend": "npm run start:dev --prefix=packages/backend",
     "start:dev:frontend": "npm run start:dev --prefix=packages/frontend",
     "start:backend": "npm run start --prefix=packages/backend",

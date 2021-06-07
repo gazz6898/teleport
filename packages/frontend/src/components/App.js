@@ -4,6 +4,9 @@ import PropTypes from 'prop-types';
 
 import { connect } from 'react-redux';
 
+import sha256 from 'simple-sha256';
+
+
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
@@ -59,7 +62,14 @@ class App extends PureComponent {
   }
 
   async login({ email, password }) {
-    console.log({ email, password });
+    const hashed = await sha256('poop');
+    console.log({ password, hashed });
+    const response = await fetch('http://localhost:4000/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password: hashed}),
+      headers: { 'Content-Type': 'application/json' },
+    }).then(res => res.json());
+    console.log(response);
   }
 
   render() {
