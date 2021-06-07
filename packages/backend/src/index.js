@@ -23,6 +23,10 @@ mysql
       res.json('Hello, world!');
     });
 
+    app.post('/login', async (req, res) => {
+      res.json(req.body);
+    });
+
     app.listen(config.get('server.port'), () => {
       console.log(`Server listening at http://localhost:${config.get('server.port')}/`);
     });

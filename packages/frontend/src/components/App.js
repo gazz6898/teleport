@@ -5,12 +5,11 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 
 import Button from '@material-ui/core/Button';
-import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
-import CardContent from '@material-ui/core/CardContent';
-import CardHeader from '@material-ui/core/CardHeader';
 import Container from '@material-ui/core/Container';
+import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
+
+import Login from '~/components/Login';
 
 const styles = theme => ({
   root: {
@@ -31,6 +30,10 @@ const styles = theme => ({
   actionBar: {
     justifyContent: 'flex-end',
   },
+
+  paper: {
+    padding: theme.spacing(),
+  },
 });
 
 class App extends PureComponent {
@@ -41,6 +44,8 @@ class App extends PureComponent {
       backendResponse: null,
       loading: true,
     };
+
+    this.login = this.login.bind(this);
   }
 
   async componentDidMount() {
@@ -53,6 +58,10 @@ class App extends PureComponent {
     });
   }
 
+  async login({ email, password }) {
+    console.log({ email, password });
+  }
+
   render() {
     const { classes } = this.props;
     const { backendResponse, loading } = this.state;
@@ -60,23 +69,10 @@ class App extends PureComponent {
     return (
       <div className={classes.root}>
         <Container maxWidth='sm'>
-          <Card>
-            <CardHeader title='Teleport Login Placeholder' />
-            <CardContent>
-              <Typography>
-                {loading ? 'Loading...' : backendResponse ? 'Backend Response:' : 'No response :('}
-              </Typography>
-              <pre>{loading ? '' : JSON.stringify(backendResponse, null, 2)}</pre>
-            </CardContent>
-            <CardActions className={classes.actionBar}>
-              <Button color='primary' variant='contained'>
-                One Button
-              </Button>
-              <Button color='secondary' variant='contained'>
-                Two Button
-              </Button>
-            </CardActions>
-          </Card>
+          <Paper className={classes.paper}>
+            <Typography variant='overline'>Login</Typography>
+            <Login onSubmit={this.login} />
+          </Paper>
         </Container>
       </div>
     );
