@@ -4,9 +4,6 @@ import PropTypes from 'prop-types';
 
 import { connect } from 'react-redux';
 
-import sha256 from 'simple-sha256';
-
-
 import Button from '@material-ui/core/Button';
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
@@ -62,14 +59,25 @@ class App extends PureComponent {
   }
 
   async login({ email, password }) {
-    const hashed = await sha256('poop');
-    console.log({ password, hashed });
+    const data = new ArrayBuffer(password.length);
+    for (let i = 0; i < password.length; i++) {
+      data[i] = password[i];
+    }
+    let hashVal = 0n;
+    const hashedBuf = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+
+    for (const value of hashedBuf) {
+      hashVal <<= 8n;
+      hashVal |= BigInt(value);
+    }
+
+    const hashed = hashVal.toString(16);
     const response = await fetch('http://localhost:4000/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password: hashed}),
+      body: JSON.stringify({ email, password: hashed }),
       headers: { 'Content-Type': 'application/json' },
     }).then(res => res.json());
-    console.log(response);
+    console.log(hashed);
   }
 
   render() {
