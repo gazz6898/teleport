@@ -1,12 +1,24 @@
-import React, { PureComponent } from 'react';
-import { withStyles } from '@material-ui/styles';
+import React, { PureComponent, useContext, createContext, useState } from 'react';
 import PropTypes from 'prop-types';
+import { withStyles } from '@material-ui/styles';
 
-import { connect } from 'react-redux';
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  Redirect,
+  useHistory,
+  useLocation,
+} from 'react-router-dom';
+import routes from '~/util/routes';
 
-import Button from '@material-ui/core/Button';
+import withAuth from '~/hoc/withAuth';
+
+import AppBar from '@material-ui/core/AppBar';
 import Container from '@material-ui/core/Container';
 import Paper from '@material-ui/core/Paper';
+import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 
 import Login from '~/components/Login';
@@ -14,7 +26,7 @@ import Login from '~/components/Login';
 const styles = theme => ({
   root: {
     position: 'absolute',
-    top: 0,
+    top: 64,
     bottom: 0,
     left: 0,
     right: 0,
@@ -24,7 +36,7 @@ const styles = theme => ({
     alignItems: 'center',
 
     backgroundColor: theme.palette.background.dark,
-    padding: theme.spacing(),
+    overflow: 'hidden',
   },
 
   actionBar: {
@@ -34,73 +46,126 @@ const styles = theme => ({
   paper: {
     padding: theme.spacing(),
   },
+
+  link: {
+    color: theme.palette.common.white,
+    marginRight: theme.spacing(),
+    '&:last-child': {
+      marginRight: 0,
+    },
+  },
+
+  spacer: {
+    flexGrow: 1,
+  },
+
+  userLabel: {
+    marginRight: theme.spacing(),
+    lineHeight: 1,
+  },
 });
 
 class App extends PureComponent {
   constructor(props) {
     super(props);
 
-    this.state = {
-      backendResponse: null,
-      loading: true,
-    };
-
-    this.login = this.login.bind(this);
-  }
-
-  async componentDidMount() {
-    const response = await fetch('http://localhost:4000/')
-      .then(res => res.json())
-      .catch(console.error);
-    this.setState({
-      backendResponse: response,
-      loading: false,
-    });
-  }
-
-  async login({ email, password }) {
-    const data = new ArrayBuffer(password.length);
-    for (let i = 0; i < password.length; i++) {
-      data[i] = password[i];
-    }
-    let hashVal = 0n;
-    const hashedBuf = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
-
-    for (const value of hashedBuf) {
-      hashVal <<= 8n;
-      hashVal |= BigInt(value);
-    }
-
-    const hashed = hashVal.toString(16);
-    const response = await fetch('http://localhost:4000/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password: hashed }),
-      headers: { 'Content-Type': 'application/json' },
-    }).then(res => res.json());
-    console.log(hashed);
+    this.state = {};
   }
 
   render() {
-    const { classes } = this.props;
-    const { backendResponse, loading } = this.state;
+    const { auth, classes } = this.props;
 
     return (
-      <div className={classes.root}>
-        <Container maxWidth='sm'>
-          <Paper className={classes.paper}>
-            <Typography variant='overline'>Login</Typography>
-            <Login onSubmit={this.login} />
-          </Paper>
-        </Container>
-      </div>
+      <Router>
+        <div className={classes.root}>
+          <nav>
+            <AppBar color='primary'>
+              <Toolbar>
+                {routes.map(({ path, label }) => (
+                  <Link key={path} className={classes.link} to={`/${path}`}>
+                    {label}
+                  </Link>
+                ))}
+                <span className={classes.spacer} />
+                {auth.user ? (
+                  <Typography className={classes.userLabel}>{auth.user}</Typography>
+                ) : null}
+                <Link className={classes.link} to='/login' onClick={auth.signout}>
+                  {auth.user ? 'Log out' : 'Log in'}
+                </Link>
+              </Toolbar>
+            </AppBar>
+          </nav>
+          <Switch>
+            {routes.map(
+              ({
+                path,
+                Component = () => (
+                  <Container maxWidth='sm'>
+                    <Paper className={classes.paper} />
+                  </Container>
+                ),
+                componentProps = {},
+              }) => (
+                <Route
+                  key={path}
+                  path={`/${path}`}
+                  render={({ location }) =>
+                    auth.user ? (
+                      <Component auth={auth} {...componentProps} />
+                    ) : (
+                      <Redirect
+                        to={{
+                          pathname: '/login',
+                          state: { from: location },
+                        }}
+                      />
+                    )
+                  }
+                />
+              )
+            )}
+
+            <Route
+              key='login'
+              path='/login'
+              render={({ location, ...rest }) =>
+                auth.user ? (
+                  <Redirect to={{ pathname: '/ride' }} />
+                ) : (
+                  <Login onSubmit={auth.signin} />
+                )
+              }
+            />
+
+            <Route key='*' path='*'>
+              <Container maxWidth='sm'>
+                <Paper className={classes.paper}>
+                  <Typography variant='h1' align='center'>
+                    404
+                  </Typography>
+                  <Typography variant='body1' align='center'>
+                    There are plenty of places we can take you, but that isn't one of them.
+                  </Typography>
+                </Paper>
+              </Container>
+            </Route>
+          </Switch>
+        </div>
+      </Router>
     );
   }
 }
 
-App.propTypes = {};
+App.propTypes = {
+  auth: PropTypes.shape({
+    signin: PropTypes.func.isRequired,
+    signout: PropTypes.func.isRequired,
+    user: PropTypes.string,
+  }).isRequired,
+  classes: PropTypes.object.isRequired,
+};
 
 App.defaultProps = {};
 
-const mapStateToProps = ({}) => ({});
-
-export default connect(mapStateToProps, {})(withStyles(styles)(App));
+export default withStyles(styles)(withAuth(App));

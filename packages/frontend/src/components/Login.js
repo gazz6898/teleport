@@ -3,8 +3,10 @@ import { withStyles } from '@material-ui/styles';
 import PropTypes from 'prop-types';
 
 import Button from '@material-ui/core/Button';
-import Grid from '@material-ui/core/Grid';
+import Container from '@material-ui/core/Container';
+import Paper from '@material-ui/core/Paper';
 import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
 
 const styles = theme => ({
   field: {
@@ -16,6 +18,9 @@ const styles = theme => ({
     justifyContent: 'flex-end',
   },
   loginButton: {},
+  paper: {
+    padding: theme.spacing(),
+  },
 });
 
 class Login extends PureComponent {
@@ -51,40 +56,45 @@ class Login extends PureComponent {
     const { email, password } = this.state;
 
     return (
-      <form>
-        <TextField
-          className={classes.field}
-          id='email-input'
-          type='email'
-          label='Email'
-          variant='outlined'
-          value={email}
-          onChange={this.updateEmailField}
-          required
-          fullWidth
-        />
-        <TextField
-          className={classes.field}
-          id='password-input'
-          type='password'
-          label='Password'
-          variant='outlined'
-          value={password}
-          onChange={this.updatePasswordField}
-          required
-          fullWidth
-        />
-        <div className={classes.actionBar}>
-          <Button
-            className={classes.loginButton}
-            color='primary'
-            variant='contained'
-            onClick={this.submit}
-          >
-            Log In
-          </Button>
-        </div>
-      </form>
+      <Container maxWidth='sm'>
+        <Paper className={classes.paper}>
+          <Typography variant='overline'>Login</Typography>
+          <form>
+            <TextField
+              className={classes.field}
+              id='email-input'
+              type='email'
+              label='Email'
+              variant='outlined'
+              value={email}
+              onChange={this.updateEmailField}
+              required
+              fullWidth
+            />
+            <TextField
+              className={classes.field}
+              id='password-input'
+              type='password'
+              label='Password'
+              variant='outlined'
+              value={password}
+              onChange={this.updatePasswordField}
+              required
+              fullWidth
+            />
+            <div className={classes.actionBar}>
+              <Button
+                className={classes.loginButton}
+                color='primary'
+                variant='contained'
+                onClick={this.submit}
+              >
+                Log In
+              </Button>
+            </div>
+          </form>
+        </Paper>
+      </Container>
     );
   }
 }

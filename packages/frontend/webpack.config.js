@@ -36,4 +36,11 @@ module.exports = {
       '~': path.resolve(__dirname, 'src/'),
     },
   },
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: '/',
+  },
+  devServer: {
+    historyApiFallback: true,
+  }
 };

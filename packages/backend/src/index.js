@@ -2,6 +2,8 @@ import cors from 'cors';
 import express from 'express';
 import mysql from 'promise-mysql';
 
+import jwt from 'jsonwebtoken';
+
 import config from './config';
 
 mysql
@@ -10,10 +12,9 @@ mysql
     user: config.get('db.user'),
     password: config.get('db.pass'),
     database: config.get('db.db'),
-    multipleStatements: true
+    multipleStatements: true,
   })
-  .then(sql => {
-
+  .then(async sql => {
     //generate new dummy data here
 
     //yes, the hubs and vehicles were probably placed in the oceans, we like to think outside the box
@@ -98,20 +99,20 @@ mysql
 
     ALTER TABLE Drive AUTO_INCREMENT=1;
 
-    INSERT INTO \`User\` (username, pass_hash)
+    INSERT INTO \`User\` (is_admin, username, pass_hash)
       VALUES
-      ('test-user@example.com', '008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601'),
-      ('alice@aol.com', '008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601'),
-      ('bob@gmail.com', '008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601'),
-      ('candice@yahoo.com', '008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601'),
-      ('david@dailymail.com', '008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601'),
-      ('evan@ymail.com', '008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601');
+      (1, 'test-user@example.com', '71b6c1d53832f789a7f2435a7c629245fa3761ad8487775ebf4957330213a706'),
+      (0, 'alice@aol.com', '71b6c1d53832f789a7f2435a7c629245fa3761ad8487775ebf4957330213a706'),
+      (0, 'bob@gmail.com', '71b6c1d53832f789a7f2435a7c629245fa3761ad8487775ebf4957330213a706'),
+      (0, 'candice@yahoo.com', '71b6c1d53832f789a7f2435a7c629245fa3761ad8487775ebf4957330213a706'),
+      (0, 'david@dailymail.com', '71b6c1d53832f789a7f2435a7c629245fa3761ad8487775ebf4957330213a706'),
+      (0, 'evan@ymail.com', '71b6c1d53832f789a7f2435a7c629245fa3761ad8487775ebf4957330213a706');
     INSERT INTO Hub (hub_id, latitude, longitude)
       VALUES
-      (1, 89.309, 23.223),
-      (2, -15.090, -37.238),
-      (3, 134.392, -93.552),
-      (4, -164.332, 11.298);
+      (1, 43.013375, -83.715638),
+      (2, 43.003685, -83.714538),
+      (3, 43.030275, -83.725138),
+      (4, 44.013215, -83.705514);
     INSERT INTO Vehicle (vehicle_id, hub_id, charge, latitude, longitude)
       VALUES
       (1, NULL, 27, 15.330, -93.239),
@@ -138,10 +139,23 @@ mysql
       (8, 5, NULL, -152.796, 174.215, -152.905, 174.500),
       (9, 6, 2, 179.431, 27.409, 0.093, 26.994);`;
 
-    console.log('Attempting the following query:', query);
-    sql.query(query).catch(error => console.log(error));
+    await sql.query(query).catch(error => console.log(error));
 
-    return sql;
+    await sql.end();
+
+    return mysql.createConnection({
+      host: config.get('db.host'),
+      user: config.get('db.user'),
+      password: config.get('db.pass'),
+      database: config.get('db.db'),
+      typeCast: (field, useDefaultTypeCasting) => {
+        if (field.type === 'BIT' && field.length === 1) {
+          return field.buffer()[0] === 1;
+        }
+
+        return useDefaultTypeCasting();
+      },
+    });
   })
   .then(sql => {
     const app = express();
@@ -150,57 +164,111 @@ mysql
     app.use(express.urlencoded({ extended: true }));
     app.use(cors());
 
+    /** @type {express.RequestHandler} */
+    const authorize =
+      ({ admin = false } = {}) =>
+      (req, res, next) => {
+        const auth = req.headers['authorization'];
+        if (!auth || !/^Bearer /.test(auth)) {
+          res.sendStatus(401);
+        } else {
+          try {
+            const token = auth.substring(7);
+            const decoded = jwt.verify(token, config.get('jwt.secret'));
+
+            if (admin && !decoded.admin) {
+              res.sendStatus(401);
+            }
+
+            next();
+          } catch (error) {
+            console.log(error);
+            res.sendStatus(401);
+          }
+        }
+      };
+
     // REST API
-    app.get('/', async (req, res) => {
-
-      console.log('==================================================\nGET\n/');
-      console.log(req.body);
-      console.log('--------------------------------------------------');
-
-      res.json('Hello, world!');
-      console.log('==================================================');
+    /**
+     * Get info for the Ride screen
+     */
+    app.post('/ride', authorize({ admin: false }), async (req, res) => {
+      const hubs = await getTable(sql, 'Hub');
+      const vehicles = await getTable(sql, 'Vehicle');
+      res.json({ hubs, vehicles });
     });
 
     /**
      * Query a table
      */
-    app.post('/query', async (req, res) => {
-      console.log('==================================================\nPOST\n/query');
-      console.log(req.body);
-      console.log('--------------------------------------------------');
-      let query = await getTable(sql, req.body.tableName, req.body.columns);
-      console.log(query);
+    app.post('/query', authorize({ admin: true }), async (req, res) => {
+      const query = await getTable(sql, req.body.tableName, req.body.columns);
       res.json(query);
-      console.log('==================================================');
+    });
+
+    /**
+     * Insert into a table
+     */
+    app.post('/insert', authorize({ admin: true }), async (req, res) => {
+      const { columns, tableName, values } = req.body;
+      console.log(req.body);
+      if ((!columns, !tableName || !values)) {
+        res.sendStatus(401);
+      } else {
+        const q = `INSERT INTO ${tableName} ${
+          columns.length ? `(${columns.join(',')})` : ''
+        } VALUES (?)`;
+        console.log(q);
+        await sql
+          .query(
+            q,
+            values.map(v => columns.map(c => v[c]))
+          )
+          .catch(err => console.log(err));
+        res.json({ done: true });
+      }
+    });
+
+    /**
+     * Delete from a table
+     */
+    app.post('/delete', authorize({ admin: true }), async (req, res) => {
+      const { column, tableName, values } = req.body;
+      if (!column || !tableName || !values) {
+        res.sendStatus(401);
+      } else {
+        await sql.query(`DELETE FROM ${tableName} WHERE ${column} IN (?)`, values);
+        res.json({ done: true });
+      }
     });
 
     app.post('/login', async (req, res) => {
-      
-      console.log('==================================================\nPOST\n/login');
-      console.log(req.body);
-      console.log('--------------------------------------------------');
+      const { email, password } = req.body;
 
-      let userQuery = await sql.query('SELECT * FROM `User` WHERE username = ?', [req.body.email]).catch(error => console.log(error));
-
-      if(!userQuery.length) {
-        //user not found
-        console.log('user not found\n', {email: req.body.email});
-
-      } else if(userQuery[0].pass_hash != req.body.password) {
-        //incorrect password
-        console.log('incorrect password\n', {email: req.body.email, passhash: userQuery[0].pass_hash, attempthash: req.body.password});
-
-      } else {
-        //correct password
-        console.log('correct password\n', {email: req.body.email, passhash: req.body.password});
+      if (!email || !password) {
+        res.json({ error: new Error('Email and password must be provided.') });
       }
 
-      if(userQuery.length) console.log(userQuery[0].username);
+      try {
+        const [user] = await sql.query(
+          'SELECT username, pass_hash, is_admin FROM `User` WHERE username = ? AND pass_hash = ?',
+          [email, password]
+        );
 
-      res.json(userQuery);
-      //res.json(req.body);
-
-      console.log('==================================================');
+        if (user) {
+          res.json({
+            user,
+            token: jwt.sign({ email, admin: user.is_admin }, config.get('jwt.secret'), {
+              expiresIn: '1h',
+            }),
+          });
+        } else {
+          res.json({ error: new Error('The user could not be authenticated.') });
+        }
+      } catch (error) {
+        console.log(error);
+        res.json({ error });
+      }
     });
 
     app.listen(config.get('server.port'), () => {
@@ -212,19 +280,15 @@ mysql
     process.exit(1);
   });
 
- /**
-  * This function returns an array of rows with the given column names from the given table
-  * @param {mysql.Connection} sql 
-  * @param {string} tableName 
-  * @param {string[]} columns 
-  * @returns {any[]}
-  */
-  function getTable(sql, tableName, columns) {
+/**
+ * This function returns an array of rows with the given column names from the given table
+ * @param {mysql.Connection} sql
+ * @param {string} tableName
+ * @param {string[]} columns
+ * @returns {any[]}
+ */
+function getTable(sql, tableName, columns = []) {
+  let queryString = `SELECT ${columns.length ? columns.join(', ') : '*'} FROM ${tableName}`;
 
-    let queryString = `SELECT ${columns.length ? columns.join(', ') : '*'} FROM ${tableName}`;
-
-    return sql.query(queryString).catch(error => console.log(error));
-  }
-
-
-
+  return sql.query(queryString).catch(error => console.log(error));
+}
