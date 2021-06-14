@@ -198,6 +198,16 @@ mysql
       res.json({ hubs, vehicles });
     });
 
+    // REST API
+    /**
+     * Get info for the Ride screen
+     */
+    app.post('/trips/:user', authorize({ admin: false }), async (req, res) => {
+      const { user } = req.params;
+      const trips = await sql.query(`SELECT * FROM Drive AS D LEFT OUTER JOIN Trip AS T ON (D.trip_id = T.trip_id) WHERE T.user_id = ?;`, [user]);
+      res.json(trips);
+    });
+
     /**
      * Query a table
      */
@@ -251,7 +261,7 @@ mysql
 
       try {
         const [user] = await sql.query(
-          'SELECT username, pass_hash, is_admin FROM `User` WHERE username = ? AND pass_hash = ?',
+          'SELECT user_id, username, pass_hash, is_admin FROM `User` WHERE username = ? AND pass_hash = ?',
           [email, password]
         );
 

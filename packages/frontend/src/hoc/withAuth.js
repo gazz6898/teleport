@@ -8,7 +8,10 @@ const withAuth = WrappedComponent =>
       super(props);
 
       this.state = {
-        user: localStorage.getItem('user'),
+        user: {
+          id: localStorage.getItem('user_id'),
+          email: localStorage.getItem('email'),
+        },
         token: localStorage.getItem('jwt'),
       };
 
@@ -34,9 +37,10 @@ const withAuth = WrappedComponent =>
       const response = await request({ route: `login`, body: { email, password: hashed } });
 
       if (response?.token) {
-        localStorage.setItem('user', email);
+        localStorage.setItem('user_id', response.user.user_id);
+        localStorage.setItem('email', email);
         localStorage.setItem('jwt', response.token);
-        this.setState({ user: email, token: response.token });
+        this.setState({ user: { id: response.user.user_id, email }, token: response.token });
         if (callback) {
           callback();
         }
@@ -45,7 +49,8 @@ const withAuth = WrappedComponent =>
 
     async signout(event, callback) {
       this.setState({ user: null, token: null });
-      localStorage.removeItem('user');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('email');
       localStorage.removeItem('jwt');
       if (callback) {
         callback();

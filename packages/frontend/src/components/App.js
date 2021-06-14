@@ -88,7 +88,7 @@ class App extends PureComponent {
                 ))}
                 <span className={classes.spacer} />
                 {auth.user ? (
-                  <Typography className={classes.userLabel}>{auth.user}</Typography>
+                  <Typography className={classes.userLabel}>{auth.user.email}</Typography>
                 ) : null}
                 <Link className={classes.link} to='/login' onClick={auth.signout}>
                   {auth.user ? 'Log out' : 'Log in'}

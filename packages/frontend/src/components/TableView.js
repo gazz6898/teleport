@@ -119,10 +119,13 @@ class TableView extends PureComponent {
   }
 
   async populateData() {
-    const { tableName } = this.props;
-    const data = await request({ route: 'query', body: { tableName } });
+    const { tableName, route = 'query', queryParams = {} } = this.props;
 
-    return data;
+    if (route !== 'query') {
+      return request({ route, body: queryParams });
+    } else {
+      return request({ route: 'query', body: { tableName } });
+    }
   }
 
   createSortHandler(columnName) {
