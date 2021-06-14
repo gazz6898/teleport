@@ -204,7 +204,10 @@ mysql
      */
     app.post('/trips/:user', authorize({ admin: false }), async (req, res) => {
       const { user } = req.params;
-      const trips = await sql.query(`SELECT * FROM Drive AS D LEFT OUTER JOIN Trip AS T ON (D.trip_id = T.trip_id) WHERE T.user_id = ?;`, [user]);
+      const trips = await sql.query(
+        `SELECT * FROM Drive AS D LEFT OUTER JOIN Trip AS T ON (D.trip_id = T.trip_id) WHERE T.user_id = ?;`,
+        [user]
+      );
       res.json(trips);
     });
 
@@ -222,7 +225,7 @@ mysql
     app.post('/insert', authorize({ admin: true }), async (req, res) => {
       const { columns, tableName, values } = req.body;
       console.log(req.body);
-      if ((!columns, !tableName || !values)) {
+      if (!columns || !tableName || !values) {
         res.sendStatus(401);
       } else {
         const q = `INSERT INTO ${tableName} ${
