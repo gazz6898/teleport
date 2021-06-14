@@ -1,5 +1,11 @@
 # Teleport
 
+This is a prototype project of a self-driving car taxi service called "Teleport". Built with MySQL and Node.js, this website service allows you to request a ride from your current location to an address or point on a map. As a proof of concept and experiment with SQL, the backend erases the database's contents and replaces them with example data on startup. Later implementations may add pages to the website, connect Google Maps services, implement a pricing structure, or create admin tools for maintaining the database.
+
+## Info
+
+This app allows its users to hail an autonomous vehicle to take them to a destination. Vehicles may recharge, wait for an order, or stop for maintanence at one of many hubs across various locations. This database will track the status of cars and users, including times, locations/destinations, charge left, cost of trips, etc.. Route planning is left to the onboard computer in each autonomous vehicle, and cost calculation is left to the hailing app (not currently implemented). In the event that a trip cannot be completed by a single vehicle, another vehicle may drive the remainder of the trip. In this way, a user will order a "trip," which may consist of taking multiple self-driving taxis.
+
 ## Setup
 
 ### MySQL
